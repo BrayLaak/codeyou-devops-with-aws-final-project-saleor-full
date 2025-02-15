@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ./saleor-api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - saleor-media:/app/media
+    environment:
+      - ALLOWED_HOSTS=localhost,api,dashboard
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - JAEGER_AGENT_HOST=${JAEGER_AGENT_HOST}
+    depends_on:
+      - db
+      - redis
+      - jaeger
+    networks:
+      - saleor-backend-tier
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ./saleor-dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "9000:80"
+    environment:
+      - API_URL=http://api:8000/graphql/
+      - APP_MOUNT_URI=/dashboard/
+    depends_on:
+      - api
+    networks:
+      - saleor-backend-tier
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - saleor-db:/var/lib/postgresql/data
+      - ./replica_user.sql:/docker-entrypoint-initdb.d/replica_user.sql
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    networks:
+      - saleor-backend-tier
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.0-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - saleor-redis:/data
+    networks:
+      - saleor-backend-tier
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.20.0
+    ports:
+      - "16686:16686"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+    volumes:
+      - jaeger-tmpfs:/tmp
+    networks:
+      - saleor-backend-tier
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - saleor-backend-tier
+    restart: unless-stopped
+
+volumes:
+  saleor-db:
+  saleor-redis:
+  saleor-media:
+  jaeger-tmpfs:
+    driver: tmpfs
+
+networks:
+  saleor-backend-tier:
+    driver: bridge
