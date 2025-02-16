@@ -13,27 +13,32 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
+    - name: Install Docker Compose
+      run: |
+        sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+
     - name: Validate Compose
       run: docker-compose -f docker-compose.yml -f docker-compose.staging.yml up -d --build
 
     - name: Build Docker Image for Saleor API
-      run: docker build -t saleor-api:staging ./saleor-api
+      run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/saleor-api:staging ./saleor-api
 
     - name: Trivy Scan for Saleor API
-      run: trivy image saleor-api:staging
+      run: trivy image ${{ secrets.DOCKERHUB_USERNAME }}/saleor-api:staging
 
     - name: Push Saleor API Image to DockerHub
       run: |
-        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u your-dockerhub-username --password-stdin
-        docker push saleor-api:staging
+        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/saleor-api:staging
 
     - name: Build Docker Image for Saleor Dashboard
-      run: docker build -t saleor-dashboard:staging ./saleor-dashboard
+      run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/saleor-dashboard:staging ./saleor-dashboard
 
     - name: Trivy Scan for Saleor Dashboard
-      run: trivy image saleor-dashboard:staging
+      run: trivy image ${{ secrets.DOCKERHUB_USERNAME }}/saleor-dashboard:staging
 
     - name: Push Saleor Dashboard Image to DockerHub
       run: |
-        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{secrets.DOCKERHUB_USERNAME}} --password-stdin
-        docker push ${{ secrets.DOCKER_USER }}/saleor-api:develop
+        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/saleor-dashboard:staging
