@@ -1,11 +1,9 @@
-name: CI/CD Pipeline
+name: Staging CI/CD Pipeline
 
 on:
   push:
     branches:
-      - develop
       - staging
-      - production
 
 jobs:
   build:
@@ -15,53 +13,16 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.8'
-
-    - name: Install Poetry
-      run: pip install poetry==1.8.4
-
-    - name: Install dependencies with Poetry
-      run: poetry install --no-root
-
-    - name: Validate Compose (Staging Branch)
-      if: github.ref == 'refs/heads/staging'
+    - name: Validate Compose
       run: docker-compose -f docker-compose.yml -f docker-compose.staging.yml up -d --build
 
     - name: Build Docker Image
-      run: docker build -t saleor-dashboard:${{ github.sha }} .
+      run: docker build -t saleor-dashboard:staging .
 
     - name: Trivy Scan
-      run: trivy image saleor-dashboard:${{ github.sha }}
+      run: trivy image saleor-dashboard:staging
 
     - name: Push to DockerHub
       run: |
         echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u your-dockerhub-username --password-stdin
-        docker push saleor-dashboard:${{ github.sha }}
-
-    - name: Tag Production Image as Latest
-      if: github.ref == 'refs/heads/production'
-      run: |
-        docker tag saleor-dashboard:${{ github.sha }} saleor-dashboard:latest
-        docker push saleor-dashboard:latest
-
-    - name: Set up AWS CLI (Production Branch)
-      if: github.ref == 'refs/heads/production'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y awscli
-        aws --version
-
-    - name: Configure AWS Credentials (Production Branch)
-      if: github.ref == 'refs/heads/production'
-      run: |
-        aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws configure set default.region us-east-1 # Replace with your region
-
-    - name: Deploy to AWS Fargate (Production Branch)
-      if: github.ref == 'refs/heads/production'
-      run: |
-        aws ecs update-service --cluster BL_Fargate_Saleor --service BL_Fargate_SaleorService --force-new-deployment
+        docker push saleor-dashboard:staging
