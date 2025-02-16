@@ -50,7 +50,7 @@ RUN mkdir -p /app && chown -R saleor:saleor /app
 USER saleor
 
 # Collect static files
-RUN SECRET_KEY=dummy STATIC_URL=${STATIC_URL} python3 manage.py collectstatic --no-input
+RUN SECRET_KEY=${SECRET_KEY} STATIC_URL=${STATIC_URL} python3 manage.py collectstatic --no-input
 
 # Expose port and command to run the app
 EXPOSE 8000
