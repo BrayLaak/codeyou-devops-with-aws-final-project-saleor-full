@@ -21,10 +21,10 @@ jobs:
 
     - name: Push to DockerHub
       run: |
-        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u your-dockerhub-username --password-stdin
-        docker push saleor-dashboard:production
-        docker tag saleor-dashboard:production saleor-dashboard:latest
-        docker push saleor-dashboard:latest
+        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/saleor-dashboard:production
+        docker tag ${{ secrets.DOCKERHUB_USERNAME }}/saleor-dashboard:production ${{ secrets.DOCKERHUB_USERNAME }}/saleor-dashboard:latest
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/saleor-dashboard:latest
 
     - name: Set up AWS CLI
       run: |
@@ -36,7 +36,7 @@ jobs:
       run: |
         aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws configure set default.region us-east-1 # Replace with your region
+        aws configure set default.region us-east-2
 
     - name: Deploy to AWS Fargate
       run: |
