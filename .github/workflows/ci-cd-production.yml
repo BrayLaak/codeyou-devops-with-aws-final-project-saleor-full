@@ -46,11 +46,11 @@ jobs:
         docker tag ${{ secrets.DOCKERHUB_USERNAME }}/saleor-dashboard:production ${{ secrets.DOCKERHUB_USERNAME }}/saleor-dashboard:latest
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/saleor-dashboard:latest
 
-    - name: Set up AWS CLI
+    - name: Install AWS CLI using pip
       run: |
-        sudo apt-get update
-        sudo apt-get install -y awscli
-        aws --version
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        sudo ./aws/install
 
     - name: Configure AWS Credentials
       run: |
