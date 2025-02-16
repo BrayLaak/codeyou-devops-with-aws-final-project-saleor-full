@@ -19,6 +19,12 @@ jobs:
     - name: Build Docker Image for Saleor API
       run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/saleor-api:staging ./saleor-api
 
+    - name: Install Trivy
+      run: |
+        sudo apt-get install wget
+        wget https://github.com/aquasecurity/trivy/releases/download/v0.20.2/trivy_0.20.2_Linux-64bit.deb
+        sudo dpkg -i trivy_0.20.2_Linux-64bit.deb
+
     - name: Trivy Scan for Saleor API
       run: trivy image ${{ secrets.DOCKERHUB_USERNAME }}/saleor-api:staging
 
