@@ -18,7 +18,7 @@ jobs:
 
     - name: Build Docker Image for Saleor API
       run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/saleor-api:staging ./saleor-api
- 
+
     - name: Install Trivy
       run: |
         sudo apt-get install wget
