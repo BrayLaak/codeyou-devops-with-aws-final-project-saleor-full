@@ -1,0 +1,43 @@
+name: Production CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - production
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Build Docker Image
+      run: docker build -t saleor-dashboard:production .
+
+    - name: Trivy Scan
+      run: trivy image saleor-dashboard:production
+
+    - name: Push to DockerHub
+      run: |
+        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u your-dockerhub-username --password-stdin
+        docker push saleor-dashboard:production
+        docker tag saleor-dashboard:production saleor-dashboard:latest
+        docker push saleor-dashboard:latest
+
+    - name: Set up AWS CLI
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y awscli
+        aws --version
+
+    - name: Configure AWS Credentials
+      run: |
+        aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws configure set default.region us-east-1 # Replace with your region
+
+    - name: Deploy to AWS Fargate
+      run: |
+        aws ecs update-service --cluster BL_Fargate_Saleor --service BL_Fargate_SaleorService --force-new-deployment
