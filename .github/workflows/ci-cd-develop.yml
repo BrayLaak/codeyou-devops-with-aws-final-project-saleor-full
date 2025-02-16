@@ -1,0 +1,76 @@
+name: Develop CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+
+    - name: Install Poetry
+      run: pip install poetry==1.8.4
+
+    - name: Install dependencies for Saleor API with Poetry
+      run: |
+        cd saleor-api
+        poetry install --no-root
+
+    - name: Lint Code for Saleor API
+      run: |
+        cd saleor-api
+        ruff check .
+      continue-on-error: true
+
+    - name: Audit Dependencies for Saleor API
+      run: |
+        cd saleor-api
+        pip-audit
+      continue-on-error: true
+
+    - name: Build Docker Image for Saleor API
+      run: docker build -t saleor-api:develop ./saleor-api
+
+    - name: Trivy Scan for Saleor API
+      run: trivy image saleor-api:develop
+
+    - name: Push Saleor API Image to DockerHub
+      run: |
+        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u your-dockerhub-username --password-stdin
+        docker push saleor-api:develop
+
+    - name: Install Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '18'
+
+    - name: Install dependencies for Saleor Dashboard
+      run: |
+        cd saleor-dashboard
+        npm ci --legacy-peer-deps
+
+    - name: Build Saleor Dashboard
+      run: |
+        cd saleor-dashboard
+        npm run build
+
+    - name: Build Docker Image for Saleor Dashboard
+      run: docker build -t saleor-dashboard:develop ./saleor-dashboard
+
+    - name: Trivy Scan for Saleor Dashboard
+      run: trivy image saleor-dashboard:develop
+
+    - name: Push Saleor Dashboard Image to DockerHub
+      run: |
+        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u your-dockerhub-username --password-stdin
+        docker push saleor-dashboard:develop
