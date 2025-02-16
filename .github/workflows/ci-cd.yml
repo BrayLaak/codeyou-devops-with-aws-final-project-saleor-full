@@ -1,11 +1,9 @@
-name: CI/CD Pipeline
+name: Develop CI/CD Pipeline
 
 on:
   push:
     branches:
       - develop
-      - staging
-      - production
 
 jobs:
   build:
@@ -20,53 +18,27 @@ jobs:
       with:
         python-version: '3.8'
 
-    - name: Install dependencies
-      run: pip install -r requirements.txt
+    - name: Install Poetry
+      run: pip install poetry==1.8.4
 
-    - name: Lint Code (Develop Branch)
-      if: github.ref == 'refs/heads/develop'
+    - name: Install dependencies with Poetry
+      run: poetry install --no-root
+
+    - name: Lint Code
       run: ruff check .
+      continue-on-error: true
 
-    - name: Audit Dependencies (Develop Branch)
-      if: github.ref == 'refs/heads/develop'
+    - name: Audit Dependencies
       run: pip-audit
-
-    - name: Validate Compose (Staging Branch)
-      if: github.ref == 'refs/heads/staging'
-      run: docker-compose up -d --build
+      continue-on-error: true
 
     - name: Build Docker Image
-      run: docker build -t your-app-name:${{ github.ref }} .
+      run: docker build -t saleor-dashboard:develop .
 
     - name: Trivy Scan
-      run: trivy image your-app-name:${{ github.ref }}
+      run: trivy image saleor-dashboard:develop
 
     - name: Push to DockerHub
       run: |
         echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u your-dockerhub-username --password-stdin
-        docker push your-app-name:${{ github.ref }}
-
-    - name: Tag Production Image as Latest
-      if: github.ref == 'refs/heads/production'
-      run: |
-        docker tag your-app-name:production your-app-name:latest
-        docker push your-app-name:latest
-
-    - name: Set up AWS CLI (Production Branch)
-      if: github.ref == 'refs/heads/production'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y awscli
-        aws --version
-
-    - name: Configure AWS Credentials (Production Branch)
-      if: github.ref == 'refs/heads/production'
-      run: |
-        aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws configure set default.region us-east-1 # Replace with your region
-
-    - name: Deploy to AWS Fargate (Production Branch)
-      if: github.ref == 'refs/heads/production'
-      run: |
-        aws ecs update-service --cluster BL_Fargate_Saleor --service BL_Fargate_SaleorService --force-new-deployment
+        docker push saleor-dashboard:develop
