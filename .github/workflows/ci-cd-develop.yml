@@ -52,8 +52,8 @@ jobs:
 
     - name: Push Saleor API Image to DockerHub
       run: |
-        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u your-dockerhub-username --password-stdin
-        docker push saleor-api:develop
+        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{secrets.DOCKERHUB_USERNAME}} --password-stdin
+        docker push ${{ secrets.DOCKER_USER }}/saleor-api:develop
 
     - name: Install Node.js
       uses: actions/setup-node@v2
