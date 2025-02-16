@@ -39,7 +39,7 @@ jobs:
       continue-on-error: true
 
     - name: Build Docker Image for Saleor API
-      run: docker build -t saleor-api:develop ./saleor-api
+      run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/saleor-api:develop ./saleor-api
 
     - name: Install Trivy
       run: |
@@ -48,12 +48,12 @@ jobs:
         sudo dpkg -i trivy_0.20.2_Linux-64bit.deb
 
     - name: Trivy Scan for Saleor API
-      run: trivy image saleor-api:develop
+      run: trivy image ${{ secrets.DOCKERHUB_USERNAME }}/saleor-api:develop
 
     - name: Push Saleor API Image to DockerHub
       run: |
-        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{secrets.DOCKERHUB_USERNAME}} --password-stdin
-        docker push ${{ secrets.DOCKER_USER }}/saleor-api:develop
+        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/saleor-api:develop
 
     - name: Install Node.js
       uses: actions/setup-node@v2
@@ -71,12 +71,12 @@ jobs:
         npm run build
 
     - name: Build Docker Image for Saleor Dashboard
-      run: docker build -t saleor-dashboard:develop ./saleor-dashboard
+      run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/saleor-dashboard:develop ./saleor-dashboard
 
     - name: Trivy Scan for Saleor Dashboard
-      run: trivy image saleor-dashboard:develop
+      run: trivy image ${{ secrets.DOCKERHUB_USERNAME }}/saleor-dashboard:develop
 
     - name: Push Saleor Dashboard Image to DockerHub
       run: |
-        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u your-dockerhub-username --password-stdin
-        docker push saleor-dashboard:develop
+        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/saleor-dashboard:develop
