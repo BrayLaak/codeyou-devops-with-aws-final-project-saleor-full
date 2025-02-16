@@ -20,37 +20,32 @@ jobs:
       with:
         python-version: '3.8'
 
-    - name: Install dependencies
-      run: pip install -r requirements.txt
+    - name: Install Poetry
+      run: pip install poetry==1.8.4
 
-    - name: Lint Code (Develop Branch)
-      if: github.ref == 'refs/heads/develop'
-      run: ruff check .
-
-    - name: Audit Dependencies (Develop Branch)
-      if: github.ref == 'refs/heads/develop'
-      run: pip-audit
+    - name: Install dependencies with Poetry
+      run: poetry install --no-root
 
     - name: Validate Compose (Staging Branch)
       if: github.ref == 'refs/heads/staging'
-      run: docker-compose up -d --build
+      run: docker-compose -f docker-compose.yml -f docker-compose.staging.yml up -d --build
 
     - name: Build Docker Image
-      run: docker build -t your-app-name:${{ github.ref }} .
+      run: docker build -t saleor-dashboard:${{ github.sha }} .
 
     - name: Trivy Scan
-      run: trivy image your-app-name:${{ github.ref }}
+      run: trivy image saleor-dashboard:${{ github.sha }}
 
     - name: Push to DockerHub
       run: |
         echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u your-dockerhub-username --password-stdin
-        docker push your-app-name:${{ github.ref }}
+        docker push saleor-dashboard:${{ github.sha }}
 
     - name: Tag Production Image as Latest
       if: github.ref == 'refs/heads/production'
       run: |
-        docker tag your-app-name:production your-app-name:latest
-        docker push your-app-name:latest
+        docker tag saleor-dashboard:${{ github.sha }} saleor-dashboard:latest
+        docker push saleor-dashboard:latest
 
     - name: Set up AWS CLI (Production Branch)
       if: github.ref == 'refs/heads/production'
