@@ -1,0 +1,72 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - develop
+      - staging
+      - production
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Lint Code (Develop Branch)
+      if: github.ref == 'refs/heads/develop'
+      run: ruff check .
+
+    - name: Audit Dependencies (Develop Branch)
+      if: github.ref == 'refs/heads/develop'
+      run: pip-audit
+
+    - name: Validate Compose (Staging Branch)
+      if: github.ref == 'refs/heads/staging'
+      run: docker-compose up -d --build
+
+    - name: Build Docker Image
+      run: docker build -t your-app-name:${{ github.ref }} .
+
+    - name: Trivy Scan
+      run: trivy image your-app-name:${{ github.ref }}
+
+    - name: Push to DockerHub
+      run: |
+        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u your-dockerhub-username --password-stdin
+        docker push your-app-name:${{ github.ref }}
+
+    - name: Tag Production Image as Latest
+      if: github.ref == 'refs/heads/production'
+      run: |
+        docker tag your-app-name:production your-app-name:latest
+        docker push your-app-name:latest
+
+    - name: Set up AWS CLI (Production Branch)
+      if: github.ref == 'refs/heads/production'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y awscli
+        aws --version
+
+    - name: Configure AWS Credentials (Production Branch)
+      if: github.ref == 'refs/heads/production'
+      run: |
+        aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws configure set default.region us-east-1 # Replace with your region
+
+    - name: Deploy to AWS Fargate (Production Branch)
+      if: github.ref == 'refs/heads/production'
+      run: |
+        aws ecs update-service --cluster BL_Fargate_Saleor --service BL_Fargate_SaleorService --force-new-deployment
