@@ -13,13 +13,33 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Build Docker Image
-      run: docker build -t saleor-dashboard:production .
+    - name: Install Trivy
+      run: |
+        sudo apt-get update
+        sudo apt-get install wget -y
+        wget https://github.com/aquasecurity/trivy/releases/download/v0.20.2/trivy_0.20.2_Linux-64bit.deb
+        sudo dpkg -i trivy_0.20.2_Linux-64bit.deb
 
-    - name: Trivy Scan
-      run: trivy image saleor-dashboard:production
+    - name: Build Docker Image for Saleor API
+      run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/saleor-api:production ./saleor-api
 
-    - name: Push to DockerHub
+    - name: Trivy Scan for Saleor API
+      run: trivy image ${{ secrets.DOCKERHUB_USERNAME }}/saleor-api:production
+
+    - name: Push Saleor API Image to DockerHub
+      run: |
+        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/saleor-api:production
+        docker tag ${{ secrets.DOCKERHUB_USERNAME }}/saleor-api:production ${{ secrets.DOCKERHUB_USERNAME }}/saleor-api:latest
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/saleor-api:latest
+
+    - name: Build Docker Image for Saleor Dashboard
+      run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/saleor-dashboard:production ./saleor-dashboard
+
+    - name: Trivy Scan for Saleor Dashboard
+      run: trivy image ${{ secrets.DOCKERHUB_USERNAME }}/saleor-dashboard:production
+
+    - name: Push Saleor Dashboard Image to DockerHub
       run: |
         echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/saleor-dashboard:production
