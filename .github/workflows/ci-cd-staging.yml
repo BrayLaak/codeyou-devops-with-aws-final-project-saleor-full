@@ -1,0 +1,39 @@
+name: Staging CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Validate Compose
+      run: docker-compose -f docker-compose.yml -f docker-compose.staging.yml up -d --build
+
+    - name: Build Docker Image for Saleor API
+      run: docker build -t saleor-api:staging ./saleor-api
+
+    - name: Trivy Scan for Saleor API
+      run: trivy image saleor-api:staging
+
+    - name: Push Saleor API Image to DockerHub
+      run: |
+        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u your-dockerhub-username --password-stdin
+        docker push saleor-api:staging
+
+    - name: Build Docker Image for Saleor Dashboard
+      run: docker build -t saleor-dashboard:staging ./saleor-dashboard
+
+    - name: Trivy Scan for Saleor Dashboard
+      run: trivy image saleor-dashboard:staging
+
+    - name: Push Saleor Dashboard Image to DockerHub
+      run: |
+        echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{secrets.DOCKERHUB_USERNAME}} --password-stdin
+        docker push ${{ secrets.DOCKER_USER }}/saleor-api:develop
